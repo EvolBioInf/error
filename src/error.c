@@ -1,41 +1,47 @@
-/***** error.c **************************************************************
- * Description: Library for error handling
- * Author: Bernhard Haubold
- * Email: haubold@evolbio.mpg.de
- * License: GNU General Public License, https://www.gnu.org/licenses/gpl.html
- * Date: Wed Jun 12 13:53:32 2019
- ****************************************************************************/
+#include "error.h"
+#include <stdarg.h>
 #include <stdio.h>
+#include <bsd/stdlib.h>
 #include <stdlib.h>
-#include "interface.h"
-#include "eprintf.h"
-
-void scanFile(FILE *fp, Args *args) {
-  for(int i = 0; i < args->i; i++)
-    printf("Test output.\n");
+#include <string.h>
+void error(char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  if (getprogname())
+    fprintf(stderr, "error in %s: ", getprogname());
+  else
+    fprintf(stderr, "error in anonymous program: ");
+  vfprintf(stderr, fmt, args);
+  va_end(args);
+  exit(1);
 }
-
-int main(int argc, char *argv[]){
-  FILE *fp;
-  Args *args = getArgs(argc, argv);
-
-  setprogname2(argv[0]);
-  if(args->v)
-    printSplash(args);
-  if(args->h || args->err)
-    printUsage();
-  if(args->nf == 0) {
-    fp = stdin;
-    scanFile(fp, args);
-  } else {
-    for(int i = 0; i < args->nf; i++) {
-      fp = efopen(args->fi[i], "r");
-      scanFile(fp, args);
-      fclose(fp);
-    }
-  }
-  freeArgs(args);
-  free(progname());
-  return 0;
+void *emalloc(size_t n) {
+  void *p = malloc(n);
+  if (!p)
+    error("emalloc, can't allocate %ld bytes.\n", n);
+  return p;
 }
-
+void *erealloc(void *p, size_t n) {
+  p = realloc(p, n);
+  if (!p)
+    error("erealloc, can't allocate %ld bytes.\n", n);
+  return p;
+}
+FILE *efopen(const char *name, const char *mode) {
+  FILE *fp = fopen(name, mode);
+  if (!fp)
+    error("efopen, can't open %s\n", name);
+  return fp;
+}
+char *estrdup(const char *s) {
+  char *p = strdup(s);
+  if (!p)
+    error("estrdup, couldn't duplicate a string.\n");
+  return p;
+}
+char *estrndup(const char *s, size_t n) {
+  char *p = strndup(s, n);
+  if (!p)
+    error("estrndup, couldn't copy a string.\n");
+  return p;
+}

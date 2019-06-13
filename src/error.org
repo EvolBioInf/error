@@ -1,0 +1,328 @@
+#+begin_src latex
+  \section{Introduction}
+  The \texttt{error} library handles common error scenarios encountered
+  in C programs uniformly. It is strongly indebted to the error handling
+  examples in~\cite[p. 174f]{ker88:cpr}. The library consists of the
+  interface \texttt{error.h} and the implementation \texttt{error.c}.
+
+  \section{Interface}
+  The interface is built from includes and public function declarations.
+#+end_src
+#+begin_src C <<error.h>>=
+  // <<Interface includes>>
+  // <<Public function declarations>>
+#+end_src
+#+begin_src latex
+The central function of the library is \texttt{error}, which prints
+an error message and then terminates the program.
+#+end_src
+#+begin_src C <<Public function declarations>>=
+  void error(char *fmt, ...);
+#+end_src
+#+begin_src latex
+  The rest of the library consists of error-enabled versions of widely
+  used functions from three central areas of computing: memory
+  allocation, file handling, and string handling. For each new function
+  the argument list and the return value of the original call is
+  preserved. For memory allocation, the functions \texttt{malloc} and
+  \texttt{realloc} are rephrased as \texttt{emalloc} and
+  \texttt{erealloc}. Correspondingly, \texttt{emalloc} allocates a chunk
+  of memory and returns a pointer to it, while \texttt{erealloc} changes
+  the size of an allocated chunk of memory and returns a pointer to
+  that. In addition, both functions exit program execution with an error
+  message upon failure.
+#+end_src
+#+begin_src C <<Public function declarations>>=
+  void *emalloc(size_t n);
+  void *erealloc(void *p, size_t n);
+#+end_src
+#+begin_src latex
+  For file handling, \texttt{efopen} is an error-aware version of
+  \texttt{fopen}. It returns a pointer to an open file and exits with an
+  error message upon failure.
+#+end_src
+#+begin_src C <<Public function declarations>>=
+  FILE *efopen(const char *file, const char *mode);
+#+end_src
+#+begin_src latex
+  The \texttt{FILE} data type is defined in the input/output part of the
+  standard library.
+#+end_src
+#+begin_src C <<Interface includes>>=
+  #include <stdio.h>
+#+end_src
+#+begin_src latex
+    Among the string functions, string duplication by \texttt{strdup}
+    and \texttt{strndup} are repackaged as \texttt{estrdup} and
+    \texttt{estrndup}. Both functions take as input a character
+    array; \texttt{estrdup} returns a full copy, and \texttt{estrndup}
+    copies up to $n$ prefix characters of the input string. Both
+    functions exit with an error message upon failure.
+#+end_src
+#+begin_src C <<Public function declarations>>=
+  char *estrdup(const char *s);
+  char *estrndup(const char *s, size_t n);
+#+end_src
+#+begin_src latex
+  \section{Implementation}
+  The implementation starts by including the header file
+  \texttt{error.h} and various other headers. This is followed by the
+  actual function implementations.
+#+end_src
+#+begin_src C <<error.c>>=
+  #include "error.h"
+  // <<Implementation includes>>
+  // <<Function implementations>>
+#+end_src
+#+begin_src latex
+  The central function of the library is \texttt{error}, which I
+  basically copied from~\cite[p. 174]{ker88:cpr}. Notice the
+  implementation of the variable argument list. The function
+  \texttt{vfprintf} is the cousin of the better known
+  \texttt{fprintf}, except that \texttt{vprintf} handles a list of
+  arbitrarily many arguments, \texttt{args}. These arguments are of
+  type \texttt{va\_list}, which is initialized in conjunction with the
+  format specifier, \texttt{fmt}, using \texttt{va\_start}. After the
+  arguments have been processed in \texttt{vprintf}, a call to
+  \texttt{va\_end} concludes the processing of the argument list.
+
+  Another feature of \texttt{error} is that it prints the name of the
+  program under which it runs. This is designed to help debugging
+  programs that are part of a pipeline. If no program name has been set,
+  it is called ``anonymous''.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  void error(char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    if (getprogname())
+      fprintf(stderr, "error in %s: ", getprogname());
+    else
+      fprintf(stderr, "error in anonymous program: ");
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    exit(1);
+  }
+#+end_src
+#+begin_src latex
+  The data type \texttt{va\_list} and the functions \texttt{va\_start}
+  and \texttt{va\_end} are defined in \texttt{stdarg.h}, the functions
+  \texttt{fprintf} and \texttt{vfprintf} in \texttt{stdio.h}. The
+  function \texttt{getprogname} is part of the BSD system library, where
+  it is defined in \texttt{stdlib.h}.
+#+end_src
+#+begin_src C <<Implementation includes>>=
+  #include <stdarg.h>
+  #include <stdio.h>
+  #include <bsd/stdlib.h>
+#+end_src
+#+begin_src latex
+  The function \texttt{emalloc} wraps \texttt{malloc} and checks the
+  result.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  void *emalloc(size_t n) {
+    void *p = malloc(n);
+    if (!p)
+      error("emalloc, can't allocate %ld bytes.\n", n);
+    return p;
+  }
+#+end_src
+#+begin_src latex
+  Memory allocation by \texttt{malloc}, and \texttt{realloc} used next,
+  is among the utility functions defined in \texttt{stdlib.h}.
+#+end_src
+#+begin_src C <<Implementation includes>>=
+  #include <stdlib.h>
+#+end_src
+#+begin_src latex
+  The function \texttt{erealloc} wraps \texttt{realloc} and checks the
+  result.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  void *erealloc(void *p, size_t n) {
+    p = realloc(p, n);
+    if (!p)
+      error("erealloc, can't allocate %ld bytes.\n", n);
+    return p;
+  }
+#+end_src
+#+begin_src latex
+  The function \texttt{efopen} wraps \texttt{fopen} and checks for errors.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  FILE *efopen(const char *name, const char *mode) {
+    FILE *fp = fopen(name, mode);
+    if (!fp)
+      error("efopen, can't open %s\n", name);
+    return fp;
+  }
+#+end_src
+#+begin_src latex
+  The function \texttt{estrdup} wraps \texttt{strdup} and checks the
+  result.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  char *estrdup(const char *s) {
+    char *p = strdup(s);
+    if (!p)
+      error("estrdup, couldn't duplicate a string.\n");
+    return p;
+  }
+#+end_src
+#+begin_src latex
+  The functions \texttt{strdup} and \texttt{strndup}, which is used
+  next, are both declared in \texttt{string.h}.
+#+end_src
+#+begin_src C <<Implementation includes>>=
+  #include <string.h>
+#+end_src
+#+begin_src latex
+  The function \texttt{estrndup} wraps \texttt{strndup} and checks the
+  result.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  char *estrndup(const char *s, size_t n) {
+    char *p = strndup(s, n);
+    if (!p)
+      error("estrndup, couldn't copy a string.\n");
+    return p;
+  }
+#+end_src
+#+begin_src latex
+  This concludes the implementation of \texttt{error}, time to test it.
+
+  \section{Testing}
+  The test program includes \texttt{error.h} and other headers. Apart
+  from that, it consists solely of the \texttt{main} function.
+#+end_src
+#+begin_src C <<testError.c>>=
+  #include "error.h"
+  //<<Test includes>>
+  //<<Main function>>
+#+end_src
+#+begin_src latex
+  The \texttt{main} function communicates with the user and then goes
+  through the individual tests.
+#+end_src
+#+begin_src C <<Main function>>=
+  int main(int argc, char **argv) {
+    //<<Communicate with user>>
+    //<<Tests>>
+    return 0;
+  }
+#+end_src
+#+begin_src latex
+    Testing the functions in the \texttt{error} library needs to take
+    account of the fact that each function call terminates the
+    program. This means that a test of function $c$ has to jump right
+    into function $c$ and cannot go through testing functions $a$ and
+    $b$ beforehand. This shapes how the program communicates with the
+    user.
+#+end_src
+#+begin_src C <<Communicate with user>>=
+  if (argc == 1 || strcmp(argv[1], "-h") == 0) {
+    printf("Usage: testError emalloc|erealloc|efopen|estrdup|estrndup\n");
+    exit(0);
+  }
+#+end_src
+#+begin_src latex
+  The \texttt{printf} function is declared in \texttt{stdio.h} and the
+  \texttt{exit} function in \texttt{stdlib.h}.
+#+end_src
+#+begin_src C <<Test includes>>=
+  #include <stdio.h>
+  #include <stdlib.h>
+#+end_src
+#+begin_src latex
+  To test \texttt{emalloc}, first allocate a small amount of memory as a
+  positive control, and then allocate a negative amount of memory to
+  trip it up and serve as a negative control.
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "emalloc") == 0) {
+    void *p = emalloc(256);
+    free(p);
+    printf("emalloc positive control\n");
+    p = emalloc(-1);
+  }
+#+end_src
+#+begin_src latex
+    The function \texttt{free} is declared in \texttt{stdlib.h}, already
+    included, the function \texttt{strcmp} in \texttt{string.h}.
+#+end_src
+#+begin_src C <<Test includes>>=
+  #include <string.h>
+#+end_src
+#+begin_src latex
+  To test \texttt{erealloc}, first a bit of memory is allocated, which
+  is then moderately extended. That's the positive control. Then the
+  object size is set to a negative value, yielding the negative control.
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "erealloc") == 0) {
+    void *p = emalloc(256);
+    p = erealloc(p, 1042);
+    printf("erealloc positive control\n");
+    erealloc(p, -1);
+  }
+#+end_src
+#+begin_src latex
+  To test file opening, a new file is generated and opened with
+  \texttt{efopen} (positive control). Then the file is removed; the
+  subsequent attempt to open it provokes an error (negative control).
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "efopen") == 0) {
+    char *fileName = "tmpFile.txt";
+    // <<Create file>>
+    FILE *fp = efopen(fileName, "r");
+    fclose(fp);
+    printf("efopen, positive control\n");
+    remove(fileName);
+    efopen(fileName, "r");
+  }
+#+end_src
+#+begin_src latex
+  To create a file, the system command \texttt{touch} is called from
+  within the program.
+#+end_src
+#+begin_src C <<Create file>>=
+  char cmd[256];
+  sprintf(cmd, "touch %s", fileName);
+  int s = system(cmd);
+  if (s != 0)
+    fprintf(stderr, "%s failed\n", cmd);
+#+end_src
+#+begin_src latex
+  With string duplication I could not think of a way to cause an error,
+  so there is only a positive control.
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "estrdup") == 0) {
+    char *s = "test";
+    char *d = estrdup(s);
+    printf("estrdup, positive control, %s\n", d);
+  }
+#+end_src
+#+begin_src latex
+  With length-limited string duplication, I also couldn't find a way to
+  trip the function leaving only the positive control.
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "estrndup") == 0) {
+    char *s = "test";
+    char *p = estrndup(s, 2);
+    printf("estrndup, positive control, %s\n", p);
+  }
+#+end_src
+#+begin_src latex
+  This concludes the testing program, the library is now ready to be
+  used.
+#+end_src
+#+begin_src latex
+\section{List of code chunks}
+  \nowebchunks
+\section{Index}
+\nowebindex
+#+end_latex

@@ -7,4 +7,10 @@ doc/*.log
 doc/*.pdf
 doc/date.tex
 doc/version.tex
+doc/error.bbl
+doc/error.blg
+doc/text.tex
+src/error.h
+src/testError
+src/testError.c
 src/error

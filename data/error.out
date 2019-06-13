@@ -1,1 +1,8 @@
-Test output.
+error in testError: emalloc, can't allocate -1 bytes.
+emalloc positive control
+error in testError: erealloc, can't allocate -1 bytes.
+erealloc positive control
+error in testError: efopen, can't open tmpFile.txt
+efopen, positive control
+estrdup, positive control, test
+estrndup, positive control, te
