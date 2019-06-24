@@ -1,6 +1,7 @@
 ./testError emalloc  &>  tmp.out
 ./testError erealloc &>> tmp.out
 ./testError efopen   &>> tmp.out
+./testError eopendir &>> tmp.out
 ./testError estrdup  &>> tmp.out
 ./testError estrndup &>> tmp.out
 DIFF=$(diff tmp.out ../data/error.out)

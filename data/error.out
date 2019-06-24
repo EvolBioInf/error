@@ -4,5 +4,14 @@ error in testError: erealloc, can't allocate -1 bytes.
 erealloc positive control
 error in testError: efopen, can't open tmpFile.txt
 efopen, positive control
+error in testError: eopendir, couldn't open NotAdirectory
+error.sh
+format.sed
+org2nw
+date.sh
+..
+version.sh
+.
+eopendir, positive control
 estrdup, positive control, test
 estrndup, positive control, te

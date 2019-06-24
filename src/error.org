@@ -52,6 +52,20 @@ an error message and then terminates the program.
   #include <stdio.h>
 #+end_src
 #+begin_src latex
+  Similarly, \texttt{eopendir} is an error-aware version of
+  \texttt{opendir}, which either returns a pointer to an open directory,
+  or, failing that, exits with an error message.
+#+end_src
+#+begin_src C <<Public function declarations>>=
+  DIR *eopendir(char *dir);
+#+end_src
+#+begin_src latex
+  \texttt{DIR} is defined in the directory part of the standard library.
+#+end_src
+#+begin_src C <<Interface includes>>=
+  #include <dirent.h>
+#+end_src
+#+begin_src latex
     Among the string functions, string duplication by \texttt{strdup}
     and \texttt{strndup} are repackaged as \texttt{estrdup} and
     \texttt{estrndup}. Both functions take as input a character
@@ -159,6 +173,18 @@ an error message and then terminates the program.
   }
 #+end_src
 #+begin_src latex
+  The function \texttt{eopendir} wraps the function \texttt{opendir} and
+  checks for failure to open the requested directory.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  DIR *eopendir(char *dir) {
+    DIR *d = opendir(dir);
+    if (!d)
+      error("eopendir, couldn't open %s\n", dir);
+    return d;
+  }
+#+end_src
+#+begin_src latex
   The function \texttt{estrdup} wraps \texttt{strdup} and checks the
   result.
 #+end_src
@@ -222,7 +248,7 @@ an error message and then terminates the program.
 #+end_src
 #+begin_src C <<Communicate with user>>=
   if (argc == 1 || strcmp(argv[1], "-h") == 0) {
-    printf("Usage: testError emalloc|erealloc|efopen|estrdup|estrndup\n");
+    printf("Usage: testError emalloc|erealloc|efopen|eopendir|estrdup|estrndup\n");
     exit(0);
   }
 #+end_src
@@ -281,6 +307,22 @@ an error message and then terminates the program.
     printf("efopen, positive control\n");
     remove(fileName);
     efopen(fileName, "r");
+  }
+#+end_src
+#+begin_src latex
+  Directory opening is tested by scanning the \texttt{scripts} directory
+  of this package as positive control, and attempting to open the
+  directory \texttt{NotAdirectory} as negative control.
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "eopendir") == 0) {
+    DIR *d = eopendir("../scripts");
+    struct dirent *dir;
+    while ((dir = readdir(d)) != NULL)
+      printf("%s\n", dir->d_name);
+    closedir(d);
+    printf("eopendir, positive control\n");
+    eopendir("NotAdirectory");
   }
 #+end_src
 #+begin_src latex
