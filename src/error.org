@@ -52,6 +52,14 @@ an error message and then terminates the program.
   #include <stdio.h>
 #+end_src
 #+begin_src latex
+  Instead of a file, a pipe can be opened using \texttt{popen}. The data
+  type returned is still \texttt{FILE}; so the error-aware version is
+  declared as
+#+end_src
+#+begin_src C <<Public function declarations>>=
+  FILE *epopen(const char *cmd, const char *type);
+#+end_src
+#+begin_src latex
   Similarly, \texttt{eopendir} is an error-aware version of
   \texttt{opendir}, which either returns a pointer to an open directory,
   or, failing that, exits with an error message.
@@ -173,6 +181,18 @@ an error message and then terminates the program.
   }
 #+end_src
 #+begin_src latex
+  The function \texttt{epopen} wraps \texttt{popen} and checks that a
+  pipe was really opened.
+#+end_src
+#+begin_src C <<Function implementations>>=
+  FILE *epopen(const char *cmd, const char *type) {
+    FILE *pp = popen(cmd, type);
+    if (!pp)
+      error("epopen, couldn't open %s\n", cmd);
+    return pp;
+  }
+#+end_src
+#+begin_src latex
   The function \texttt{eopendir} wraps the function \texttt{opendir} and
   checks for failure to open the requested directory.
 #+end_src
@@ -248,7 +268,11 @@ an error message and then terminates the program.
 #+end_src
 #+begin_src C <<Communicate with user>>=
   if (argc == 1 || strcmp(argv[1], "-h") == 0) {
-    printf("Usage: testError emalloc|erealloc|efopen|eopendir|estrdup|estrndup\n");
+    char *s = "Usage: testError "
+      "emalloc|erealloc|"
+      "efopen|epopen|eopendir|"
+      "estrdup|estrndup";
+    printf("%s\n", s);
     exit(0);
   }
 #+end_src
@@ -310,6 +334,21 @@ an error message and then terminates the program.
   }
 #+end_src
 #+begin_src latex
+  Building a pipe is positively tested by writing ``Hello world'' to
+  \texttt{cat}. Opening a pipe to a non-existent program provokes an
+  error message from the shell, but still opens the pipe, so I could not
+  think of a negative control.
+#+end_src
+#+begin_src C <<Tests>>=
+  if (strcmp(argv[1], "epopen") == 0) {
+    char *cmd = "cat";
+    FILE *pp = epopen(cmd, "w");
+    fprintf(pp, "Hello world\n");
+    pclose(pp);
+    printf("epopen, positive control\n");
+  }
+#+end_src
+#+begin_src latex
   Directory opening is tested by scanning the \texttt{scripts} directory
   of this package as positive control, and attempting to open the
   directory \texttt{NotAdirectory} as negative control.
@@ -365,6 +404,4 @@ an error message and then terminates the program.
 #+begin_src latex
 \section{List of code chunks}
   \nowebchunks
-\section{Index}
-\nowebindex
 #+end_latex
